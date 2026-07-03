@@ -8,6 +8,18 @@
 <meta name="description" content="Journal's Headquarter delivers daily news across World Watch, Regional Watch, Military & Tech Watch — clear, timely, trustworthy reporting." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;0,8..60,900;1,8..60,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+
+<!-- ===== GOOGLE TRANSLATE ===== -->
+<script type="text/javascript">
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement(
+      { pageLanguage: 'en', includedLanguages: 'en,hi', layout: google.translate.TranslateElement.InlineLayout.SIMPLE },
+      'google_translate_element'
+    );
+  }
+</script>
+<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 <style>
   /* ===== ROOT ===== */
   :root {
@@ -162,6 +174,35 @@
     margin-top: 8px;
   }
 
+  /* ===== TRANSLATE BAR ===== */
+  .translate-wrap {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 20px;
+    background: var(--cream-deep);
+    border-bottom: 1px solid var(--rule);
+    font-size: 12px;
+    color: var(--slate);
+    font-family: var(--mono);
+    flex-wrap: wrap;
+  }
+  .translate-wrap .goog-te-combo {
+    padding: 4px 8px;
+    font-size: 13px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    background: var(--paper);
+    font-family: var(--sans);
+  }
+  .goog-te-banner-frame.skiptranslate {
+    display: none !important;
+  }
+  body {
+    top: 0px !important;
+  }
+
   /* ===== SUPPORT BAR ===== */
   .support-bar {
     display: flex;
@@ -190,6 +231,7 @@
     background: linear-gradient(90deg, #F5E8C8, #EFDCAE, #F5E8C8);
   }
 
+  /* ===== SUPPORT MODAL ===== */
   .support-modal {
     max-width: 420px;
     text-align: center;
@@ -669,29 +711,6 @@
     color: var(--ink);
   }
 
-  /* ===== GOOGLE TRANSLATE WRAPPER ===== */
-  .translate-wrap {
-    display: flex;
-    justify-content: flex-end;
-    padding: 8px 20px;
-    background: var(--cream-deep);
-    border-bottom: 1px solid var(--rule);
-  }
-  .translate-wrap .goog-te-combo {
-    padding: 4px 8px;
-    font-size: 13px;
-    border: 1px solid var(--rule-strong);
-    border-radius: 3px;
-    background: var(--paper);
-    font-family: var(--sans);
-  }
-  .goog-te-banner-frame.skiptranslate {
-    display: none !important;
-  }
-  body {
-    top: 0px !important;
-  }
-
   /* ===== FOOTER ===== */
   footer {
     background: var(--ink);
@@ -1160,4 +1179,1555 @@
       gap: 24px;
     }
     .contact-grid {
-      grid-template-columns
+      grid-template-columns: 1fr;
+    }
+    .admin-grid {
+      grid-template-columns: 1fr;
+    }
+    .story-row {
+      grid-template-columns: 1fr;
+    }
+    .story-row .thumb {
+      width: 100%;
+      height: 180px;
+      order: -1;
+    }
+    .article-table th:nth-child(3),
+    .article-table td:nth-child(3) {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to content</a>
+<div id="app"></div>
+
+<script>
+  // ==========================================================
+  // CONFIGURATION
+  // ==========================================================
+
+  const CONFIG = {
+    ADMIN_PW: "solojournal2026",
+    FORMSPREE_URL: "https://formspree.io/f/xeebkkyp",
+    UPI_ID: "6393079532@fam",
+    PHONE: "+91 6393079532",
+    EMAIL: "theonejournal2026@gmail.com",
+    YT_NAME: "ADI GEOSPACE",
+    YT_URL: "https://www.youtube.com/@Adigeospace",
+    QR_IMAGE: "upi-qr.png",
+    SUPABASE_URL: "https://dsaifutdyvbczzwmsbdo.supabase.co",
+    SUPABASE_KEY: "sb_publishable_ljFRr85nhwfv0kunVEZSig_Ckcbvy65",
+  };
+
+  const SECTIONS = ["World Watch", "Regional Watch", "Military & Tech Watch", "HTML Journal"];
+
+  // ==========================================================
+  // SUPABASE HELPERS
+  // ==========================================================
+
+  const SB_HEADERS = {
+    apikey: CONFIG.SUPABASE_KEY,
+    Authorization: `Bearer ${CONFIG.SUPABASE_KEY}`,
+    "Content-Type": "application/json",
+  };
+
+  async function loadArticles() {
+    try {
+      const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/articles?select=*&order=timestamp.desc`, {
+        headers: SB_HEADERS,
+      });
+      if (!res.ok) throw new Error("Failed to load");
+      const data = await res.json();
+      return data.map(normalizeRow);
+    } catch (e) {
+      console.error("Load error", e);
+      showToast("Could not load articles. Check Supabase connection.");
+      return [];
+    }
+  }
+
+  function normalizeRow(row) {
+    return {
+      id: row.id,
+      section: row.section,
+      headline: row.headline,
+      deck: row.deck || "",
+      byline: row.byline,
+      body: row.body,
+      image: row.image,
+      caption: row.caption || "",
+      breaking: row.breaking || false,
+      featured: row.featured || false,
+      tags: row.tags || "",
+      timestamp: row.timestamp,
+      views: row.views || 0,
+    };
+  }
+
+  async function insertArticle(article) {
+    try {
+      const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/articles`, {
+        method: "POST",
+        headers: { ...SB_HEADERS, Prefer: "return=minimal" },
+        body: JSON.stringify([article]),
+      });
+      return res.ok;
+    } catch (e) {
+      console.error("Insert error", e);
+      return false;
+    }
+  }
+
+  async function updateArticleRemote(id, fields) {
+    try {
+      const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/articles?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { ...SB_HEADERS, Prefer: "return=minimal" },
+        body: JSON.stringify(fields),
+      });
+      return res.ok;
+    } catch (e) {
+      console.error("Update error", e);
+      return false;
+    }
+  }
+
+  async function deleteArticleRemote(id) {
+    try {
+      const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/articles?id=eq.${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: SB_HEADERS,
+      });
+      return res.ok;
+    } catch (e) {
+      console.error("Delete error", e);
+      return false;
+    }
+  }
+
+  async function incrementView(id) {
+    const article = state.articles.find((a) => a.id === id);
+    if (!article) return;
+    const newCount = (article.views || 0) + 1;
+    article.views = newCount;
+    try {
+      await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/articles?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { ...SB_HEADERS, Prefer: "return=minimal" },
+        body: JSON.stringify({ views: newCount }),
+      });
+    } catch (e) {
+      console.error("View increment error", e);
+    }
+  }
+
+  // ==========================================================
+  // STATE
+  // ==========================================================
+
+  let state = {
+    articles: [],
+    route: window.location.hash.replace(/^#\/?/, "") || "",
+    loading: true,
+  };
+
+  function isAdmin() {
+    return sessionStorage.getItem("journal_admin") === "1";
+  }
+
+  function setAdmin(val) {
+    sessionStorage.setItem("journal_admin", val ? "1" : "0");
+  }
+
+  // ==========================================================
+  // UTILITY
+  // ==========================================================
+
+  function uid() {
+    return "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function escapeHtml(str) {
+    if (str == null) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function nl2paragraphs(body) {
+    return body
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+      .join("");
+  }
+
+  function relativeTime(ts) {
+    const diff = Date.now() - ts;
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return "just now";
+    if (min < 60) return min + "m ago";
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return hr + "h ago";
+    const days = Math.floor(hr / 24);
+    if (days < 7) return days + "d ago";
+    return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function fullDate(ts) {
+    return new Date(ts).toLocaleString(undefined, {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  function slugify(str) {
+    return str.toLowerCase().replace(/\s+/g, "-");
+  }
+
+  function parseTags(str) {
+    if (!str) return [];
+    return str.split(",").map((t) => t.trim()).filter(Boolean);
+  }
+
+  function tagSlug(tag) {
+    return tag.toLowerCase().trim().replace(/\s+/g, "-");
+  }
+
+  function getArticlesBySection(section) {
+    return state.articles.filter((a) => a.section === section).sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  function getAllSorted() {
+    return [...state.articles].sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  function getLeadStory() {
+    const featured = state.articles.filter((a) => a.featured).sort((a, b) => b.timestamp - a.timestamp);
+    if (featured.length) return featured[0];
+    return getAllSorted()[0] || null;
+  }
+
+  function findArticle(id) {
+    return state.articles.find((a) => a.id === id);
+  }
+
+  function getArticlesByTag(tagSlug) {
+    return state.articles
+      .filter((a) => parseTags(a.tags).some((t) => tagSlug(t) === tagSlug))
+      .sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  function slugToSection(slug) {
+    return SECTIONS.find((s) => slugify(s) === slug);
+  }
+
+  function showToast(msg) {
+    const existing = document.querySelector(".toast");
+    if (existing) existing.remove();
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2800);
+  }
+
+  // ==========================================================
+  // RENDER FUNCTIONS
+  // ==========================================================
+
+  function renderShell(innerHtml) {
+    const today = new Date().toLocaleDateString(undefined, {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const tickerItems = getAllSorted().slice(0, 8);
+    const tickerHtml = tickerItems.length ?
+      tickerItems.map((a) => `<span>${a.breaking ? "BREAKING — " : ""}${escapeHtml(a.headline)}</span>`).join("") :
+      `<span>Welcome to Journal's Headquarter — your stories will appear here once published.</span>`;
+
+    const route = state.route;
+    const navActive = (key) => (route === key ? "active" : "");
+
+    return `
+    <div class="masthead-wrap">
+      <div class="masthead-top">
+        <div class="date-line">
+          <span>${escapeHtml(today)}</span>
+        </div>
+        <button class="lock-btn" id="lockBtn" aria-label="Open control panel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          Control Panel
+        </button>
+      </div>
+      <div class="masthead">
+        <a href="#/" style="display:inline-block;">
+          <h1><span class="the">The</span>Journal's Headquarter</h1>
+        </a>
+        <div class="tagline">World Watch · Regional Watch · Military &amp; Tech Watch</div>
+      </div>
+      <div class="translate-wrap">
+        <span>🌐 Translate:</span>
+        <div id="google_translate_element"></div>
+      </div>
+      <button class="support-bar" id="supportBarBtn" aria-label="Support independent journalism">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span>Support Independent Journalism</span>
+      </button>
+      <nav class="main-nav">
+        <div class="nav-inner">
+          <a href="#/" class="${navActive("")}">Front Page</a>
+          <a href="#/section/world-watch" class="${route === "section/world-watch" ? "active" : ""}">World Watch</a>
+          <a href="#/section/regional-watch" class="${route === "section/regional-watch" ? "active" : ""}">Regional Watch</a>
+          <a href="#/section/military-tech-watch" class="${route === "section/military-tech-watch" ? "active" : ""}">Military &amp; Tech Watch</a>
+          <a href="#/section/html-journal" class="${route === "section/html-journal" ? "active" : ""}">HTML Journal</a>
+        </div>
+      </nav>
+    </div>
+    <div class="ticker-wrap">
+      <div class="ticker-label">Latest</div>
+      <div class="ticker-track-outer">
+        <div class="ticker-track">${tickerHtml}${tickerHtml}</div>
+      </div>
+    </div>
+    <main id="main">${innerHtml}</main>
+    ${renderFooter()}
+  `;
+  }
+
+  function renderFooter() {
+    return `
+    <footer>
+      <div class="footer-inner">
+        <div>
+          <div class="footer-brand">Journal's Headquarter</div>
+          <p>Independent daily reporting on World Watch, Regional Watch, and Military &amp; Tech — clear, timely, and to the point.</p>
+        </div>
+        <div>
+          <h5>Sections</h5>
+          <div class="footer-links">
+            <a href="#/section/world-watch">World Watch</a>
+            <a href="#/section/regional-watch">Regional Watch</a>
+            <a href="#/section/military-tech-watch">Military &amp; Tech Watch</a>
+            <a href="#/section/html-journal">HTML Journal</a>
+          </div>
+        </div>
+        <div>
+          <h5>Site</h5>
+          <div class="footer-links">
+            <a href="#/about">About Us</a>
+            <a href="#/contact">Contact Us</a>
+            <a href="#/privacy">Privacy Policy</a>
+            <a href="#/terms">Terms of Service</a>
+            <a href="#/disclaimer">Disclaimer</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">© ${new Date().getFullYear()} Journal's Headquarter. All rights reserved.</div>
+    </footer>
+  `;
+  }
+
+  // ==========================================================
+  // PAGE RENDERERS
+  // ==========================================================
+
+  function renderFrontPage() {
+    const all = getAllSorted();
+    if (!all.length) {
+      return `
+      <div class="empty-state">No articles published yet. Open the control panel to publish your first story.</div>
+    `;
+    }
+
+    const lead = getLeadStory();
+    const rest = all.filter((a) => a.id !== lead.id).slice(0, 8);
+
+    const leadHtml = `
+    <article class="lead-story${lead.image ? "" : " no-img"}">
+      ${lead.image ? `<div>
+        <img class="lead-img" src="${lead.image}" alt="${escapeHtml(lead.headline)}">${lead.caption ? `<div class="lead-img-cap">${escapeHtml(lead.caption)}</div>` : ""}
+      </div>` : ""}
+      <div>
+        <div class="section-eyebrow">
+          ${lead.breaking ? `<span class="tag-breaking">Breaking</span>` : ""}
+          <span>${escapeHtml(lead.section)}</span>
+        </div>
+        <h2><a href="#/article/${lead.id}">${escapeHtml(lead.headline)}</a></h2>
+        <p class="deck">${escapeHtml(lead.deck)}</p>
+        <div class="byline-row">By <b>${escapeHtml(lead.byline)}</b> · ${relativeTime(lead.timestamp)}</div>
+      </div>
+    </article>
+  `;
+
+    const listHtml = rest.map((a) => `
+    <article class="story-row ${a.image ? "" : "no-img"}">
+      <div>
+        <div class="section-eyebrow">
+          ${a.breaking ? `<span class="tag-breaking">Breaking</span>` : ""}
+          <span>${escapeHtml(a.section)}</span>
+        </div>
+        <h3><a href="#/article/${a.id}">${escapeHtml(a.headline)}</a></h3>
+        <p class="deck">${escapeHtml(a.deck)}</p>
+        <div class="byline-row">By <b>${escapeHtml(a.byline)}</b> · ${relativeTime(a.timestamp)}</div>
+      </div>
+      ${a.image ? `<img class="thumb" src="${a.image}" alt="">` : ""}
+    </article>
+  `).join("");
+
+    return `
+    ${leadHtml}
+    <div class="section-rail">
+      <div class="story-list">${listHtml}</div>
+      <div class="rail">
+        ${renderRail("World Watch")}
+        ${renderRail("Regional Watch")}
+        ${renderRail("Military & Tech Watch")}
+      </div>
+    </div>
+  `;
+  }
+
+  function renderRail(section) {
+    const items = getArticlesBySection(section).slice(0, 4);
+    if (!items.length) return "";
+    return `
+    <h4>${escapeHtml(section)}</h4>
+    ${items.map((a) => `
+      <div class="rail-item">
+        <a href="#/article/${a.id}">${escapeHtml(a.headline)}</a>
+        <div class="meta">${a.breaking ? "BREAKING · " : ""}${relativeTime(a.timestamp)}</div>
+      </div>
+    `).join("")}
+  `;
+  }
+
+  function renderSectionPage(slug) {
+    const section = slugToSection(slug);
+    if (!section) {
+      return `<div class="empty-state">Section not found.</div>`;
+    }
+    const items = getArticlesBySection(section);
+    document.title = `${section} — Journal's Headquarter`;
+
+    if (!items.length) {
+      return `
+      <h1 class="page-title">${escapeHtml(section)}</h1>
+      <div class="empty-state">No ${escapeHtml(section)} articles yet. Check back soon.</div>
+    `;
+    }
+
+    return `
+    <h1 class="page-title">${escapeHtml(section)}</h1>
+    <div class="story-list">
+      ${items.map((a) => `
+        <article class="story-row ${a.image ? "" : "no-img"}">
+          <div>
+            <div class="section-eyebrow">
+              ${a.breaking ? `<span class="tag-breaking">Breaking</span>` : ""}
+              <span>${escapeHtml(a.section)}</span>
+            </div>
+            <h3><a href="#/article/${a.id}">${escapeHtml(a.headline)}</a></h3>
+            <p class="deck">${escapeHtml(a.deck)}</p>
+            <div class="byline-row">By <b>${escapeHtml(a.byline)}</b> · ${relativeTime(a.timestamp)}</div>
+          </div>
+          ${a.image ? `<img class="thumb" src="${a.image}" alt="">` : ""}
+        </article>
+      `).join("")}
+    </div>
+  `;
+  }
+
+  function renderTagPage(slug) {
+    const items = getArticlesByTag(slug);
+    const displayName = items.length ? parseTags(items[0].tags).find((t) => tagSlug(t) === slug) : slug.replace(/-/g, " ");
+    document.title = `${displayName} — Tagged Articles — Journal's Headquarter`;
+
+    if (!items.length) {
+      return `
+      <h1 class="page-title">Tag: ${escapeHtml(displayName)}</h1>
+      <div class="empty-state">No articles found with this tag yet.</div>
+    `;
+    }
+
+    return `
+    <h1 class="page-title">Tag: ${escapeHtml(displayName)}</h1>
+    <div class="story-list">
+      ${items.map((a) => `
+        <article class="story-row ${a.image ? "" : "no-img"}">
+          <div>
+            <div class="section-eyebrow">
+              ${a.breaking ? `<span class="tag-breaking">Breaking</span>` : ""}
+              <span>${escapeHtml(a.section)}</span>
+            </div>
+            <h3><a href="#/article/${a.id}">${escapeHtml(a.headline)}</a></h3>
+            <p class="deck">${escapeHtml(a.deck)}</p>
+            <div class="byline-row">By <b>${escapeHtml(a.byline)}</b> · ${relativeTime(a.timestamp)}</div>
+          </div>
+          ${a.image ? `<img class="thumb" src="${a.image}" alt="">` : ""}
+        </article>
+      `).join("")}
+    </div>
+  `;
+  }
+
+  let viewedThisSession = new Set();
+
+  function renderArticlePage(id) {
+    const article = findArticle(id);
+    if (!article) {
+      return `<div class="empty-state">Article not found. <br><br><a href="#/" class="btn ghost" style="margin-top:10px;display:inline-block;">Back to Front Page</a></div>`;
+    }
+
+    document.title = `${article.headline} — Journal's Headquarter`;
+
+    if (!viewedThisSession.has(id)) {
+      incrementView(id);
+      viewedThisSession.add(id);
+    }
+    const views = getViewCount(id);
+    const tags = parseTags(article.tags);
+
+    return `
+    <a href="#/" class="article-back">&larr; Back</a>
+    <div class="article-head">
+      <div class="section-eyebrow">
+        ${article.breaking ? `<span class="tag-breaking">Breaking</span>` : ""}
+        <span>${escapeHtml(article.section)}</span>
+      </div>
+      <h1>${escapeHtml(article.headline)}</h1>
+      <p class="deck">${escapeHtml(article.deck)}</p>
+      <div class="article-meta">
+        <span>By <b>${escapeHtml(article.byline)}</b></span>
+        <span>${fullDate(article.timestamp)}</span>
+        <span>${views} views</span>
+      </div>
+    </div>
+    ${article.image ? `<figure class="article-figure"><img src="${article.image}" alt="${escapeHtml(article.headline)}">${article.caption ? `<figcaption>${escapeHtml(article.caption)}</figcaption>` : ""}</figure>` : ""}
+    <div class="article-body">${nl2paragraphs(article.body)}</div>
+    ${tags.length ? `<div class="tag-row" style="max-width:680px;margin:0 auto 20px;">
+            ${tags.map((t) => `<a href="#/tag/${tagSlug(t)}" class="tag-chip">${escapeHtml(t)}</a>`).join("")}
+          </div>` : ""}
+    <div style="max-width:680px;margin:36px auto 0;">
+      <a href="#/" class="article-back">&larr; Back to Front Page</a>
+    </div>
+  `;
+  }
+
+  function getViewCount(id) {
+    const article = state.articles.find((a) => a.id === id);
+    return article ? article.views || 0 : 0;
+  }
+
+  // ==========================================================
+  // STATIC PAGES
+  // ==========================================================
+
+  function renderAboutPage() {
+    document.title = "About Us — Journal's Headquarter";
+    return `
+    <div class="static-page">
+      <h1>About Us</h1>
+      <span class="updated">Journal's Headquarter</span>
+      <p><strong>Journal's Headquarter</strong> is an independent digital publication delivering daily news and analysis across World Watch, Regional Watch, and Military &amp; Tech Watch. Our mission is simple: to bring readers clear, timely, and trustworthy reporting in a fast-changing world.</p>
+      <p>Inspired by the strategic clarity of a military headquarters, we focus on what matters — cutting through the noise to deliver accurate, well-structured, and easy-to-follow journalism.</p>
+      <p>Whether it's a geopolitical shift, regional tension, or breakthrough in military tech, our goal is to keep you informed without the fluff.</p>
+      <h2>Follow Along</h2>
+      <p>Video coverage and behind-the-scenes updates are shared on our <a href="${CONFIG.YT_URL}" target="_blank" rel="noopener noreferrer" style="color:var(--red);">${CONFIG.YT_NAME}</a> YouTube channel.</p>
+    </div>
+  `;
+  }
+
+  function renderPrivacyPage() {
+    document.title = "Privacy Policy — Journal's Headquarter";
+    return `
+    <div class="static-page">
+      <h1>Privacy Policy</h1>
+      <span class="updated">Last updated: ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</span>
+
+      <p>This Privacy Policy explains how Journal's Headquarter ("we," "us," or "our") collects, uses, and protects information when you visit our website. By using this site, you agree to the terms described below.</p>
+
+      <h2>1. Information We Collect</h2>
+      <p>We may collect limited information automatically when you visit our site, including your IP address, browser type, device type, pages viewed, and time spent on the site. If you use our contact form, we collect the name, email address, and message you voluntarily provide.</p>
+
+      <h2>2. Cookies</h2>
+      <p>Our site may use cookies and similar tracking technologies to improve your browsing experience, remember preferences, and analyze site traffic. You can disable cookies through your browser settings, though some features of the site may not function properly without them.</p>
+
+      <h2>3. Third-Party Advertising</h2>
+      <p>We may use third-party advertising companies, such as Google AdSense, to serve ads when you visit our site. These companies may use cookies and similar technologies to collect information about your visits to this and other websites in order to provide advertisements about goods and services of interest to you. Google's use of advertising cookies enables it and its partners to serve ads based on your visits to this site and/or other sites on the Internet.</p>
+      <p>You may opt out of personalized advertising by visiting Google's Ads Settings, and you can learn more about how Google uses data at Google's Privacy &amp; Terms page.</p>
+
+      <h2>4. How We Use Information</h2>
+      <ul>
+        <li>To operate, maintain, and improve our website</li>
+        <li>To respond to inquiries submitted through our contact form</li>
+        <li>To analyze site traffic and reader engagement</li>
+        <li>To display relevant advertising through third-party partners</li>
+      </ul>
+
+      <h2>5. Data Sharing</h2>
+      <p>We do not sell your personal information. We may share limited data with service providers (such as analytics or advertising partners) strictly to operate and monetize the site, in accordance with their own privacy policies.</p>
+
+      <h2>6. Data Security</h2>
+      <p>We take reasonable measures to protect information collected through this site. However, no method of transmission over the internet is completely secure, and we cannot guarantee absolute security.</p>
+
+      <h2>7. Children's Privacy</h2>
+      <p>This site is not directed at children under 13, and we do not knowingly collect personal information from children.</p>
+
+      <h2>8. Changes to This Policy</h2>
+      <p>We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated revision date.</p>
+
+      <h2>9. Contact Us</h2>
+      <p>If you have questions about this Privacy Policy or how your information is handled, please contact us at <a href="mailto:${CONFIG.EMAIL}" style="color:var(--red);">${CONFIG.EMAIL}</a>.</p>
+    </div>
+  `;
+  }
+
+  function renderTermsPage() {
+    document.title = "Terms of Service — Journal's Headquarter";
+    return `
+    <div class="static-page">
+      <h1>Terms of Service</h1>
+      <span class="updated">Last updated: ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</span>
+
+      <h2>1. Acceptance of Terms</h2>
+      <p>By using Journal's Headquarter ("we," "us," or "our"), you agree to these Terms of Service. If you do not agree, please do not use our site.</p>
+
+      <h2>2. Content Ownership</h2>
+      <p>All content published on this site — including articles, images, and graphics — is owned by Journal's Headquarter unless otherwise stated. You may not reproduce, distribute, or republish our content without prior written permission.</p>
+
+      <h2>3. User Conduct</h2>
+      <p>You agree to use our site only for lawful purposes. You must not use our site to transmit any harmful, defamatory, or otherwise objectionable material.</p>
+
+      <h2>4. Disclaimer of Warranties</h2>
+      <p>Our site is provided "as is" without any warranties of any kind. We do not guarantee that the site will be error-free or uninterrupted.</p>
+
+      <h2>5. Limitation of Liability</h2>
+      <p>Journal's Headquarter is not liable for any damages arising from your use of this site, including but not limited to direct, indirect, incidental, or consequential damages.</p>
+
+      <h2>6. Governing Law</h2>
+      <p>These terms are governed by the laws of India. Any disputes shall be resolved in the courts of India.</p>
+
+      <h2>7. Changes to Terms</h2>
+      <p>We may update these terms from time to time. Changes will be posted on this page.</p>
+
+      <h2>8. Contact</h2>
+      <p>For questions about these terms, contact us at <a href="mailto:${CONFIG.EMAIL}" style="color:var(--red);">${CONFIG.EMAIL}</a>.</p>
+    </div>
+  `;
+  }
+
+  function renderDisclaimerPage() {
+    document.title = "Disclaimer — Journal's Headquarter";
+    return `
+    <div class="static-page">
+      <h1>Disclaimer</h1>
+      <span class="updated">Last updated: ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</span>
+
+      <h2>General Information</h2>
+      <p>The information provided on Journal's Headquarter is for general informational purposes only. While we strive to keep the information accurate and up-to-date, we make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or availability of the information contained on the site.</p>
+
+      <h2>No Professional Advice</h2>
+      <p>The content on this site is not intended to be a substitute for professional advice. Always seek the advice of qualified professionals with any questions you may have.</p>
+
+      <h2>External Links</h2>
+      <p>Our site may contain links to third-party websites. We have no control over the content or practices of these sites and assume no responsibility for them.</p>
+
+      <h2>Accuracy of Information</h2>
+      <p>While we make every effort to ensure the accuracy of our content, we cannot guarantee that all information is completely error-free. We encourage readers to verify any critical information independently.</p>
+
+      <h2>Affiliate Disclosure</h2>
+      <p>Journal's Headquarter may participate in affiliate marketing programs. This means we may earn commissions on purchases made through links on our site.</p>
+
+      <h2>Contact</h2>
+      <p>If you have questions about this disclaimer, contact us at <a href="mailto:${CONFIG.EMAIL}" style="color:var(--red);">${CONFIG.EMAIL}</a>.</p>
+    </div>
+  `;
+  }
+
+  function renderContactPage() {
+    document.title = "Contact Us — Journal's Headquarter";
+    return `
+    <div class="static-page" style="max-width:900px;">
+      <h1>Contact Us</h1>
+      <span class="updated">We'd love to hear from you</span>
+      <p>Have a tip, a correction, or feedback on a story? Reach out using the details below or send us a message directly.</p>
+
+      <div class="contact-grid">
+        <div class="contact-card">
+          <h3>Email</h3>
+          <div class="val"><a class="val-link" href="mailto:${CONFIG.EMAIL}">${CONFIG.EMAIL}</a></div>
+          <h3 style="margin-top:16px;">Phone</h3>
+          <div class="val">${escapeHtml(CONFIG.PHONE)}</div>
+          <h3 style="margin-top:16px;">YouTube</h3>
+          <div class="val"><a class="val-link" href="${CONFIG.YT_URL}" target="_blank" rel="noopener noreferrer">${CONFIG.YT_NAME}</a></div>
+        </div>
+        <form class="contact-card" id="contactForm">
+          <h3>Send a Message</h3>
+          <div class="form-field">
+            <label for="cf-name">Name</label>
+            <input id="cf-name" name="name" type="text" required>
+          </div>
+          <div class="form-field">
+            <label for="cf-email">Email</label>
+            <input id="cf-email" name="email" type="email" required>
+          </div>
+          <div class="form-field">
+            <label for="cf-msg">Message</label>
+            <textarea id="cf-msg" name="message" required></textarea>
+          </div>
+          <button type="submit" class="btn red" id="cfSubmitBtn">Send Message</button>
+          <div id="cfStatus" style="margin-top:10px;font-size:13px;font-family:var(--mono);"></div>
+        </form>
+      </div>
+    </div>
+  `;
+  }
+
+  // ==========================================================
+  // ADMIN PANEL
+  // ==========================================================
+
+  let adminTab = "publish";
+  let editingId = null;
+  let pendingDeleteId = null;
+  let sortKey = "timestamp";
+  let sortDir = "desc";
+  let draftImage = null;
+  let formDraft = {
+    section: "World Watch",
+    headline: "",
+    deck: "",
+    byline: "",
+    body: "",
+    image: null,
+    caption: "",
+    breaking: false,
+    featured: false,
+    tags: "",
+  };
+
+  function blankDraft() {
+    return {
+      section: "World Watch",
+      headline: "",
+      deck: "",
+      byline: "",
+      body: "",
+      image: null,
+      caption: "",
+      breaking: false,
+      featured: false,
+      tags: "",
+    };
+  }
+
+  function renderAdminPage() {
+    if (!isAdmin()) {
+      return `
+      <div class="empty-state">
+        The control panel is locked.<br><br>
+        <button class="btn red" id="adminUnlockBtn">Enter Password</button>
+      </div>
+    `;
+    }
+
+    document.title = "Control Panel — Journal's Headquarter";
+
+    return `
+    <div class="admin-shell">
+      <div class="admin-bar">
+        <h1>Control Panel</h1>
+        <button class="btn ghost" id="adminLogoutBtn">Lock Panel</button>
+      </div>
+      <div class="admin-tabs">
+        <button data-tab="publish" class="${adminTab === "publish" ? "active" : ""}">${editingId ? "Edit Article" : "Publish New Article"}</button>
+        <button data-tab="manage" class="${adminTab === "manage" ? "active" : ""}">Manage Articles (${state.articles.length})</button>
+      </div>
+      ${adminTab === "publish" ? renderPublishForm() : renderManageTable()}
+    </div>
+  `;
+  }
+
+  function renderPublishForm() {
+    const d = formDraft;
+    const isHtmlJournal = d.section === "HTML Journal";
+
+    return `
+    <form id="publishForm">
+      <div class="admin-grid">
+        <div>
+          <fieldset>
+            <legend>Article Details</legend>
+            <div class="form-field">
+              <label for="f-section">Section</label>
+              <select id="f-section">
+                ${SECTIONS.map((s) => `<option value="${s}" ${d.section === s ? "selected" : ""}>${s}</option>`).join("")}
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="f-headline">Headline</label>
+              <input id="f-headline" type="text" value="${escapeHtml(d.headline)}" placeholder="e.g. Tensions Rise After Border Incident">
+            </div>
+            <div class="form-field">
+              <label for="f-deck">Deck / Summary</label>
+              <textarea id="f-deck" placeholder="One or two sentences summarizing the story" style="min-height:70px;">${escapeHtml(d.deck)}</textarea>
+            </div>
+            <div class="form-field">
+              <label for="f-byline">Byline (Author)</label>
+              <input id="f-byline" type="text" value="${escapeHtml(d.byline)}" placeholder="e.g. Jordan Lee">
+            </div>
+            <div class="form-field">
+              <label for="f-tags">Tags (comma-separated)</label>
+              <input id="f-tags" type="text" value="${escapeHtml(d.tags || "")}" placeholder="e.g. Iran, War, Middle East">
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Flags</legend>
+            <div class="checkbox-row breaking">
+              <input type="checkbox" id="f-breaking" ${d.breaking ? "checked" : ""}>
+              <label for="f-breaking">Mark as Breaking News</label>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="f-featured" ${d.featured ? "checked" : ""}>
+              <label for="f-featured">Feature on Front Page (lead story)</label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div>
+          ${isHtmlJournal ? `
+          <div class="htmljournal-box">
+            <p><b>HTML Journal import:</b> upload an .html file to automatically extract the plain text into the body field below.</p>
+            <div class="file-drop" id="htmlDrop">
+              <span id="htmlDropLabel">Choose .html file from device</span>
+              <input type="file" id="f-htmlfile" accept=".html,.htm,text/html">
+            </div>
+          </div>
+          ` : ""}
+
+          <fieldset>
+            <legend>Body</legend>
+            <div class="form-field">
+              <label for="f-body">Body text (separate paragraphs with a blank line)</label>
+              <textarea id="f-body" style="min-height:220px;" placeholder="Write the article body here...">${escapeHtml(d.body)}</textarea>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Image</legend>
+            <div class="file-drop ${draftImage ? "has-file" : ""}" id="imgDrop">
+              <span id="imgDropLabel">${draftImage ? "Photo selected — click to change" : "Choose photo from device"}</span>
+              <input type="file" id="f-imagefile" accept="image/*">
+            </div>
+            ${draftImage ? `<img class="img-preview" id="imgPreview" src="${draftImage}" alt="Preview">` : `<img class="img-preview" id="imgPreview" style="display:none;" alt="Preview">`}
+            <div class="form-field" style="margin-top:12px;">
+              <label for="f-caption">Image caption (optional)</label>
+              <input id="f-caption" type="text" value="${escapeHtml(d.caption)}" placeholder="Photo credit or caption">
+            </div>
+            ${draftImage ? `<button type="button" class="btn ghost" id="removeImgBtn" style="margin-top:8px;">Remove photo</button>` : ""}
+          </fieldset>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top:6px;">
+        <button type="submit" class="btn red">${editingId ? "Save Changes" : "Publish Article"}</button>
+        ${editingId ? `<button type="button" class="btn ghost" id="cancelEditBtn">Cancel Edit</button>` : `<button type="button" class="btn ghost" id="clearFormBtn">Clear Form</button>`}
+      </div>
+    </form>
+  `;
+  }
+
+  function renderManageTable() {
+    if (!state.articles.length) {
+      return `<div class="empty-state">No articles yet. Publish your first one from the "Publish New Article" tab.</div>`;
+    }
+
+    let rows = state.articles.map((a) => ({ ...a, views: a.views || 0 }));
+
+    rows.sort((a, b) => {
+      let av = a[sortKey],
+        bv = b[sortKey];
+      if (typeof av === "string") { av = av.toLowerCase();
+        bv = bv.toLowerCase(); }
+      if (av < bv) return sortDir === "asc" ? -1 : 1;
+      if (av > bv) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    const maxViews = Math.max(...rows.map((r) => r.views), 0);
+
+    return `
+    <div style="overflow-x:auto;">
+    <table class="article-table">
+      <thead>
+        <tr>
+          <th class="${sortKey === "headline" ? "sorted" : ""}" data-sort="headline">Headline</th>
+          <th class="${sortKey === "section" ? "sorted" : ""}" data-sort="section">Section</th>
+          <th class="${sortKey === "timestamp" ? "sorted" : ""}" data-sort="timestamp">Published</th>
+          <th class="${sortKey === "views" ? "sorted" : ""}" data-sort="views">Views</th>
+          <th>Flags</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((a) => {
+          const isTop = a.views === maxViews && maxViews > 0;
+          if (pendingDeleteId === a.id) {
+            return `
+                <tr class="confirm-row">
+                  <td colspan="6">
+                    <div class="confirm-inline">
+                      Delete "<b>${escapeHtml(a.headline)}</b>" permanently? This cannot be undone.
+                      <button class="btn red" data-action="confirm-delete" data-id="${a.id}" type="button">Yes, Delete</button>
+                      <button class="btn ghost" data-action="cancel-delete" type="button">Cancel</button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+          }
+          return `
+            <tr>
+              <td><a href="#/article/${a.id}" style="font-weight:600;">${escapeHtml(a.headline)}</a></td>
+              <td>${escapeHtml(a.section)}</td>
+              <td>${relativeTime(a.timestamp)}</td>
+              <td><span class="views-pill ${isTop ? "top" : ""}">${a.views}</span></td>
+              <td>
+                ${a.breaking ? `<span class="badge-pill breaking">Breaking</span>` : ""}
+                ${a.featured ? `<span class="badge-pill featured">Featured</span>` : ""}
+              </td>
+              <td>
+                <div class="row-actions">
+                  <button type="button" data-action="edit" data-id="${a.id}">Edit</button>
+                  <button type="button" class="danger" data-action="delete" data-id="${a.id}">Delete</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join("")}
+      </tbody>
+    </table>
+    </div>
+  `;
+  }
+
+  // ==========================================================
+  // ADMIN EVENT BINDING
+  // ==========================================================
+
+  function htmlToPlainText(htmlString) {
+    const doc = new DOMParser().parseFromString(htmlString, "text/html");
+    doc.querySelectorAll("script,style").forEach((el) => el.remove());
+    doc.querySelectorAll("p,div,br,h1,h2,h3,h4,h5,h6,li").forEach((el) => {
+      el.insertAdjacentText("afterend", "\n\n");
+    });
+    const text = doc.body ? doc.body.textContent : doc.documentElement.textContent;
+    return text
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .split("\n")
+      .map((l) => l.trim())
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(file);
+    });
+  }
+
+  function captureFormIntoDraft() {
+    const get = (id) => document.getElementById(id);
+    if (get("f-section")) formDraft.section = get("f-section").value;
+    if (get("f-headline")) formDraft.headline = get("f-headline").value;
+    if (get("f-deck")) formDraft.deck = get("f-deck").value;
+    if (get("f-byline")) formDraft.byline = get("f-byline").value;
+    if (get("f-tags")) formDraft.tags = get("f-tags").value;
+    if (get("f-body")) formDraft.body = get("f-body").value;
+    if (get("f-caption")) formDraft.caption = get("f-caption").value;
+    if (get("f-breaking")) formDraft.breaking = get("f-breaking").checked;
+    if (get("f-featured")) formDraft.featured = get("f-featured").checked;
+  }
+
+  function bindAdminEvents() {
+    const unlockBtn = document.getElementById("adminUnlockBtn");
+    if (unlockBtn) {
+      unlockBtn.addEventListener("click", mountLockModal);
+      return;
+    }
+
+    const logoutBtn = document.getElementById("adminLogoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", () => {
+        setAdmin(false);
+        render();
+      });
+    }
+
+    document.querySelectorAll(".admin-tabs button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        adminTab = btn.dataset.tab;
+        if (adminTab === "publish" && !editingId) formDraft = blankDraft();
+        render();
+      });
+    });
+
+    if (adminTab === "publish") bindPublishFormEvents();
+    if (adminTab === "manage") bindManageTableEvents();
+  }
+
+  function bindPublishFormEvents() {
+    const form = document.getElementById("publishForm");
+    if (!form) return;
+
+    const sectionSel = document.getElementById("f-section");
+    sectionSel.addEventListener("change", () => {
+      formDraft.section = sectionSel.value;
+      captureFormIntoDraft();
+      render();
+    });
+
+    const imgInput = document.getElementById("f-imagefile");
+    if (imgInput) {
+      imgInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const dataUrl = await readFileAsDataURL(file);
+          draftImage = dataUrl;
+          captureFormIntoDraft();
+          render();
+        } catch (err) {
+          showToast("Could not read that image file.");
+        }
+      });
+    }
+
+    const removeImgBtn = document.getElementById("removeImgBtn");
+    if (removeImgBtn) {
+      removeImgBtn.addEventListener("click", () => {
+        draftImage = null;
+        captureFormIntoDraft();
+        render();
+      });
+    }
+
+    const htmlInput = document.getElementById("f-htmlfile");
+    if (htmlInput) {
+      htmlInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const raw = await readFileAsText(file);
+          const plain = htmlToPlainText(raw);
+          captureFormIntoDraft();
+          formDraft.body = plain;
+          if (!formDraft.headline) {
+            const titleMatch = raw.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+            if (titleMatch) formDraft.headline = titleMatch[1].trim();
+          }
+          formDraft.section = "HTML Journal";
+          showToast("HTML file imported — text extracted into the body field.");
+          render();
+        } catch (err) {
+          showToast("Could not read that HTML file.");
+        }
+      });
+    }
+
+    const cancelEditBtn = document.getElementById("cancelEditBtn");
+    if (cancelEditBtn) {
+      cancelEditBtn.addEventListener("click", () => {
+        editingId = null;
+        formDraft = blankDraft();
+        draftImage = null;
+        render();
+      });
+    }
+
+    const clearFormBtn = document.getElementById("clearFormBtn");
+    if (clearFormBtn) {
+      clearFormBtn.addEventListener("click", () => {
+        formDraft = blankDraft();
+        draftImage = null;
+        render();
+      });
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      captureFormIntoDraft();
+
+      if (!formDraft.headline.trim()) { showToast("Please add a headline before publishing."); return; }
+      if (!formDraft.deck.trim()) { showToast("Please add a deck/summary before publishing."); return; }
+      if (!formDraft.byline.trim()) { showToast("Please add a byline before publishing."); return; }
+      if (!formDraft.body.trim()) { showToast("Please add body text before publishing."); return; }
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalLabel = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = editingId ? "Saving…" : "Publishing…";
+
+      let success = false;
+
+      if (editingId) {
+        const idx = state.articles.findIndex((a) => a.id === editingId);
+        const updatedFields = { ...formDraft, image: draftImage };
+        success = await updateArticleRemote(editingId, updatedFields);
+        if (success && idx !== -1) {
+          state.articles[idx] = { ...state.articles[idx], ...updatedFields };
+        }
+        if (success) showToast("Article updated.");
+        editingId = null;
+      } else {
+        const newArticle = {
+          id: uid(),
+          ...formDraft,
+          image: draftImage,
+          timestamp: Date.now(),
+          views: 0,
+        };
+        success = await insertArticle(newArticle);
+        if (success) {
+          state.articles.push(newArticle);
+          showToast("Article published.");
+        }
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalLabel;
+
+      if (success) {
+        formDraft = blankDraft();
+        draftImage = null;
+        adminTab = "manage";
+      }
+      render();
+    });
+  }
+
+  function bindManageTableEvents() {
+    document.querySelectorAll(".article-table th[data-sort]").forEach((th) => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.sort;
+        if (sortKey === key) {
+          sortDir = sortDir === "asc" ? "desc" : "asc";
+        } else {
+          sortKey = key;
+          sortDir = key === "views" ? "desc" : "desc";
+        }
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-action="edit"]').forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const a = findArticle(id);
+        if (!a) return;
+        editingId = id;
+        formDraft = {
+          section: a.section,
+          headline: a.headline,
+          deck: a.deck,
+          byline: a.byline,
+          body: a.body,
+          image: a.image,
+          caption: a.caption || "",
+          breaking: a.breaking,
+          featured: a.featured,
+          tags: a.tags || "",
+        };
+        draftImage = a.image || null;
+        adminTab = "publish";
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+      btn.addEventListener("click", () => {
+        pendingDeleteId = btn.dataset.id;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-action="cancel-delete"]').forEach((btn) => {
+      btn.addEventListener("click", () => {
+        pendingDeleteId = null;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-action="confirm-delete"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        btn.disabled = true;
+        btn.textContent = "Deleting…";
+        const success = await deleteArticleRemote(id);
+        if (success) {
+          state.articles = state.articles.filter((a) => a.id !== id);
+          showToast("Article deleted.");
+        }
+        pendingDeleteId = null;
+        render();
+      });
+    });
+  }
+
+  // ==========================================================
+  // LOCK / SUPPORT MODALS
+  // ==========================================================
+
+  function renderLockModal() {
+    return `
+    <div class="modal-overlay" id="lockOverlay">
+      <div class="modal-box">
+        <h2>Control Panel</h2>
+        <p>Enter the admin password to manage articles.</p>
+        <form id="lockForm">
+          <div class="form-field">
+            <label for="pwInput">Password</label>
+            <input id="pwInput" type="password" autocomplete="current-password" autofocus>
+          </div>
+          <div id="lockErr" class="modal-err"></div>
+          <div class="modal-actions">
+            <button type="submit" class="btn red">Unlock</button>
+            <button type="button" class="btn ghost" id="lockCancel">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  }
+
+  function mountLockModal() {
+    const root = document.getElementById("modalRoot");
+    root.innerHTML = renderLockModal();
+    const overlay = document.getElementById("lockOverlay");
+    const form = document.getElementById("lockForm");
+    const input = document.getElementById("pwInput");
+    const err = document.getElementById("lockErr");
+
+    input.focus();
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) root.innerHTML = "";
+    });
+    document.getElementById("lockCancel").addEventListener("click", () => {
+      root.innerHTML = "";
+    });
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (input.value === CONFIG.ADMIN_PW) {
+        setAdmin(true);
+        root.innerHTML = "";
+        window.location.hash = "#/admin";
+      } else {
+        err.textContent = "Incorrect password. Try again.";
+        input.value = "";
+        input.focus();
+      }
+    });
+  }
+
+  function renderSupportModal() {
+    return `
+    <div class="modal-overlay" id="supportOverlay">
+      <div class="modal-box support-modal">
+        <button class="support-close" id="supportClose" aria-label="Close">&times;</button>
+        <div class="support-heart">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <h2>Support Independent Journalism</h2>
+        <p class="support-copy">
+          Journal's Headquarter is not funded by any government, agency, or organization. This site runs entirely on one person's ambition — to build independent, non-biased journalism, free from outside influence. Your single donation directly powers that ambition.
+        </p>
+        <div class="support-qr-wrap">
+          <img src="${CONFIG.QR_IMAGE}" alt="UPI QR Code" class="support-qr" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="support-qr-placeholder" style="display:none;">QR Code</div>
+        </div>
+        <div class="support-upi-row">
+          <span class="support-upi-label">UPI ID</span>
+          <span class="support-upi-id" id="upiIdText">${escapeHtml(CONFIG.UPI_ID)}</span>
+          <button class="btn ghost support-copy-btn" id="copyUpiBtn" type="button">Copy</button>
+        </div>
+        <p class="support-thanks">Every contribution, big or small, helps keep this journal independent. Thank you.</p>
+      </div>
+    </div>
+  `;
+  }
+
+  function mountSupportModal() {
+    const root = document.getElementById("modalRoot");
+    root.innerHTML = renderSupportModal();
+    const overlay = document.getElementById("supportOverlay");
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) root.innerHTML = "";
+    });
+    document.getElementById("supportClose").addEventListener("click", () => {
+      root.innerHTML = "";
+    });
+    document.getElementById("copyUpiBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("copyUpiBtn");
+      try {
+        await navigator.clipboard.writeText(CONFIG.UPI_ID);
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = "Copy"; }, 1800);
+      } catch (e) {
+        showToast("Could not copy — please copy the UPI ID manually.");
+      }
+    });
+  }
+
+  // ==========================================================
+  // GLOBAL EVENTS
+  // ==========================================================
+
+  function bindGlobalEvents() {
+    const lockBtn = document.getElementById("lockBtn");
+    if (lockBtn) {
+      lockBtn.addEventListener("click", () => {
+        if (isAdmin()) {
+          window.location.hash = "#/admin";
+        } else {
+          mountLockModal();
+        }
+      });
+    }
+
+    const supportBarBtn = document.getElementById("supportBarBtn");
+    if (supportBarBtn) {
+      supportBarBtn.addEventListener("click", () => {
+        mountSupportModal();
+      });
+    }
+
+    const contactForm = document.getElementById("contactForm");
+    if (contactForm) {
+      contactForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("cfSubmitBtn");
+        const status = document.getElementById("cfStatus");
+        const formData = new FormData(contactForm);
+
+        btn.disabled = true;
+        btn.textContent = "Sending…";
+        status.textContent = "";
+        status.style.color = "";
+
+        try {
+          const res = await fetch(CONFIG.FORMSPREE_URL, {
+            method: "POST",
+            body: formData,
+            headers: { Accept: "application/json" },
+          });
+
+          if (res.ok) {
+            showToast("Message sent — we'll get back to you soon.");
+            contactForm.reset();
+            status.textContent = "Sent successfully.";
+            status.style.color = "var(--ok)";
+          } else {
+            const data = await res.json().catch(() => null);
+            const msg = data && data.errors ? data.errors.map((er) => er.message).join(", ") : "Something went wrong sending your message.";
+            status.textContent = msg;
+            status.style.color = "var(--red)";
+          }
+        } catch (err) {
+          status.textContent = "Could not send — check your connection and try again.";
+          status.style.color = "var(--red)";
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Send Message";
+        }
+      });
+    }
+  }
+
+  // ==========================================================
+  // ROUTER / RENDER
+  // ==========================================================
+
+  function render() {
+    const route = state.route;
+    let html = "";
+    document.title = "Journal's Headquarter — World Watch, Military & Tech";
+
+    if (state.loading) {
+      document.getElementById("app").innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Source Serif 4',Georgia,serif;font-size:18px;color:#5A6472;">
+        Loading Journal's Headquarter…
+      </div>
+    `;
+      return;
+    }
+
+    if (route === "") {
+      html = renderFrontPage();
+    } else if (route.startsWith("section/")) {
+      html = renderSectionPage(route.replace("section/", ""));
+    } else if (route.startsWith("article/")) {
+      html = renderArticlePage(route.replace("article/", ""));
+    } else if (route.startsWith("tag/")) {
+      html = renderTagPage(route.replace("tag/", ""));
+    } else if (route === "about") {
+      html = renderAboutPage();
+    } else if (route === "privacy") {
+      html = renderPrivacyPage();
+    } else if (route === "terms") {
+      html = renderTermsPage();
+    } else if (route === "disclaimer") {
+      html = renderDisclaimerPage();
+    } else if (route === "contact") {
+      html = renderContactPage();
+    } else if (route === "admin") {
+      html = renderAdminPage();
+    } else {
+      html = `<div class="empty-state">Page not found. <br><br><a href="#/" class="btn ghost" style="margin-top:10px;display:inline-block;">Back to Front Page</a></div>`;
+    }
+
+    document.getElementById("app").innerHTML = renderShell(html) + `<div id="modalRoot"></div>`;
+    bindGlobalEvents();
+
+    // Re-run Google Translate after DOM update
+    if (typeof google !== 'undefined' && google.translate) {
+      try {
+        new google.translate.TranslateElement({ pageLanguage: 'en', includedLanguages: 'en,hi', layout: google.translate.TranslateElement.InlineLayout.SIMPLE }, 'google_translate_element');
+      } catch (e) {}
+    }
+
+    if (route === "admin") bindAdminEvents();
+  }
+
+  // ==========================================================
+  // INIT
+  // ==========================================================
+
+  window.addEventListener("hashchange", () => {
+    state.route = window.location.hash.replace(/^#\/?/, "") || "";
+    render();
+    window.scrollTo(0, 0);
+  });
+
+  async function init() {
+    render();
+    state.articles = await loadArticles();
+    state.loading = false;
+    render();
+  }
+
+  // Seed data function for empty database
+  async function seedDatabase() {
+    const seedData = [{
+      id: "seed-1",
+      section: "World Watch",
+      headline: "Global Diplomacy Intensifies as Tensions Rise in Eastern Europe",
+      deck: "Leaders from multiple nations engage in emergency talks amid growing concerns over regional stability.",
+      byline: "Arjun Singh",
+      body: "Diplomatic channels are working overtime this week as tensions continue to escalate in Eastern Europe.\n\nMultiple rounds of emergency talks have been held, with both sides signaling a willingness to de-escalate while maintaining their core positions.\n\nAnalysts suggest that the coming days will be critical in determining whether a diplomatic breakthrough or further confrontation lies ahead.",
+      image: null,
+      caption: "",
+      breaking: true,
+      featured: true,
+      tags: "Diplomacy, Europe, Conflict",
+      timestamp: Date.now() - 1000 * 60 * 60 * 2,
+      views: 0,
+    }, {
+      id: "seed-2",
+      section: "Military & Tech Watch",
+      headline: "Next-Gen Stealth Fighter Completes Final Trials",
+      deck: "The new stealth fighter jet has successfully completed its final testing phase, clearing the way for full-rate production.",
+      byline: "Vikram Rathore",
+      body: "The next-generation stealth fighter has concluded its final trials, demonstrating exceptional performance across all key metrics.\n\nDefense officials confirmed that the aircraft exceeded expectations in terms of range, stealth capability, and sensor integration.\n\nProduction is expected to begin in the coming months, with the first units scheduled for delivery to frontline squadrons.",
+      image: null,
+      caption: "",
+      breaking: false,
+      featured: false,
+      tags: "Defense, Aviation, Technology",
+      timestamp: Date.now() - 1000 * 60 * 60 * 5,
+      views: 0,
+    }, {
+      id: "seed-3",
+      section: "Regional Watch",
+      headline: "South Asia Energy Summit Seeks Regional Cooperation",
+      deck: "Energy ministers from across South Asia gather to discuss joint infrastructure projects and energy security.",
+      byline: "Priya Sharma",
+      body: "The South Asia Energy Summit is underway, with representatives from all major economies in the region participating.\n\nDiscussions are centered on cross-border energy infrastructure, renewable energy collaboration, and shared grid connectivity.\n\nObservers note that energy cooperation has emerged as one of the few areas where regional consensus is achievable despite broader geopolitical differences.",
+      image: null,
+      caption: "",
+      breaking: false,
+      featured: false,
+      tags: "Energy, South Asia, Infrastructure",
+      timestamp: Date.now() - 1000 * 60 * 60 * 10,
+      views: 0,
+    }, {
+      id: "seed-4",
+      section: "HTML Journal",
+      headline: "Welcome to Journal's Headquarter",
+      deck: "A dedicated space for long-form analysis, archival material, and special reports.",
+      byline: "The Editors",
+      body: "HTML Journal is a special section for longer-form writing and archival material.\n\nArticles here can be authored directly in the control panel, or imported from an existing .html file.\n\nWe encourage contributors to make use of this space for in-depth analysis and historical documentation.",
+      image: null,
+      caption: "",
+      breaking: false,
+      featured: false,
+      tags: "Editorial, Long-form",
+      timestamp: Date.now() - 1000 * 60 * 60 * 24,
+      views: 0,
+    }, ];
+    for (const article of seedData) {
+      await insertArticle(article);
+    }
+    return await loadArticles();
+  }
+
+  // Override loadArticles to seed if empty
+  const originalLoad = loadArticles;
+  loadArticles = async function() {
+    const articles = await originalLoad();
+    if (articles.length === 0) {
+      showToast("No articles found. Seeding with sample data...");
+      const seeded = await seedDatabase();
+      return seeded;
+    }
+    return articles;
+  };
+
+  // ==========================================================
+  // START
+  // ==========================================================
+
+  init();
+</script>
+</body>
+</html>

@@ -1914,13 +1914,22 @@
             });
             adminPassword.addEventListener('keydown', e => { if (e.key === 'Enter') adminLoginBtn.click(); });
 
+            // ========== ADMIN TOGGLE — FIXED ==========
             adminToggle.addEventListener('click', function(e) {
                 e.preventDefault();
                 adminPanel.classList.toggle('visible');
-                if (adminPanel.classList.contains('visible') && isAdmin) renderAdminArticles();
+                if (adminPanel.classList.contains('visible') && isAdmin) {
+                    renderAdminArticles();
+                }
             });
-            adminCloseBtn.addEventListener('click', () => adminPanel.classList.remove('visible'));
-            refreshAdminBtn.addEventListener('click', () => { if (isAdmin) renderAdminArticles(); });
+
+            adminCloseBtn.addEventListener('click', function() {
+                adminPanel.classList.remove('visible');
+            });
+
+            refreshAdminBtn.addEventListener('click', function() {
+                if (isAdmin) renderAdminArticles();
+            });
 
             // ========== NAVIGATION ==========
             function showPage(page) {
